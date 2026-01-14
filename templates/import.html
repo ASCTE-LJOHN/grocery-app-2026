@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Product</title>
+    <style>
+        body { 
+            font-family: {{ theme.font }}; 
+            background: {{ theme.bg }}; 
+            color: {{ theme.text }}; 
+            margin: 0; padding: 30px; 
+        }
+        .form-container {
+            max-width: 500px;
+            margin: auto;
+            background: {{ theme.container }};
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid {{ theme.border }};
+        }
+        label { display: block; margin: 15px 0 5px; font-weight: 500; }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid {{ theme.border }};
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            background: {{ theme.btn_bg }};
+            color: {{ theme.btn_text }};
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        input[type="submit"]:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Add Product</h2>
+        <form method="POST">
+            <label for="name">Product Name</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="price">Price ($)</label>
+            <input type="number" id="price" name="price" step="0.01" required>
+            
+            <label for="category">Category</label>
+            <input type="text" id="category" name="category">
+            
+            <input type="submit" value="Add Product">
+        </form>
+        <p><a href="/">← Back to Home</a></p>
+    </div>
+</body>
+</html>

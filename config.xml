@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app>
+    <theme>
+        <background_color>#f5f5f5</background_color>
+        <text_color>#333333</text_color>
+        <accent_color>#4CAF50</accent_color>
+        <button_bg>#4CAF50</button_bg>
+        <button_text>#ffffff</button_text>
+        <container_bg>#ffffff</container_bg>
+        <border_color>#dddddd</border_color>
+        <font_family>Segoe UI, Arial, sans-serif</font_family>
+    </theme>
+    
+    <!-- Optional: put DB settings here if you prefer XML over .ini -->
+    <!-- <database enabled="true">
+        <host>localhost</host>
+        <dbname>groceries</dbname>
+        <user>admin</user>
+        <password>TXJXb2JiaW5z</password>
+    </database> -->
+
+    <security>
+        <admin_username>admin</admin_username>
+        <admin_password>TXJXb2JiaW5z</admin_password>
+    </security>
+</app>

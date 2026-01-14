@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Products</title>
+    <style>
+        body { 
+            font-family: {{ theme.font }}; 
+            background: {{ theme.bg }}; 
+            color: {{ theme.text }}; 
+            margin: 0; padding: 40px; 
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: {{ theme.container }};
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid {{ theme.border }};
+        }
+        h1 { color: {{ theme.accent }}; text-align: center; }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin: 25px 0 30px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 14px;
+            font-size: 1.1rem;
+            border: 1px solid {{ theme.border }};
+            border-radius: 8px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: {{ theme.accent }};
+            box-shadow: 0 0 0 3px rgba(13,110,253,0.15);
+        }
+        button {
+            padding: 14px 28px;
+            background: {{ theme.btn_bg }};
+            color: {{ theme.btn_text }};
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        button:hover { opacity: 0.92; }
+        #results {
+            margin-top: 30px;
+        }
+        .product-item {
+            padding: 14px;
+            border-bottom: 1px solid {{ theme.border }};
+            margin-bottom: 8px;
+        }
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        .no-results {
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            color: {{ theme.accent }};
+            text-decoration: none;
+        }
+    </style>
+    <script>
+        function performSearch() {
+            const query = document.getElementById('query').value.trim();
+            if (!query) return;
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `query=${encodeURIComponent(query)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+
+                if (data.products && data.products.length > 0) {
+                    data.products.forEach(product => {
+                        const item = document.createElement('div');
+                        item.className = 'product-item';
+                        item.innerHTML = `
+                            <strong>${product.name}</strong><br>
+                            <span style="color: #28a745;">$${parseFloat(product.price).toFixed(2)}</span>
+                            ${product.category ? ` • ${product.category}` : ''}
+                        `;
+                        resultsDiv.appendChild(item);
+                    });
+                } else {
+                    resultsDiv.innerHTML = '<div class="no-results">No products found matching your search.</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="no-results" style="color: #dc3545;">Error performing search. Please try again.</div>';
+            });
+        }
+
+        // Trigger search when Enter is pressed in the input field
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('query');
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();           // prevent form submission / page reload
+                    performSearch();
+                }
+            });
+
+            // Optional: auto-focus the search field when page loads
+            input.focus();
+        });
+    </script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Search Products</h1>
+
+        <div class="search-box">
+            <input type="text" id="query" placeholder="Search by name or category (e.g. apple, dairy, frozen)">
+            <button onclick="performSearch()">Search</button>
+        </div>
+
+        <div id="results"></div>
+
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grocery Store App</title>
+    <style>
+        :root {
+            --bg: {{ theme.bg }};
+            --text: {{ theme.text }};
+            --container: {{ theme.container }};
+            --accent: {{ theme.accent }};
+            --btn-bg: {{ theme.btn_bg }};
+            --btn-text: {{ theme.btn_text }};
+            --border: {{ theme.border }};
+        }
+        body.dark {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --container: #1e1e1e;
+            --accent: #66bb6a;
+            --btn-bg: #388e3c;
+            --btn-text: #ffffff;
+            --border: #333;
+        }
+        body {
+            font-family: {{ theme.font }};
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 30px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--container);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        h1 { color: var(--accent); text-align: center; }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        .card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .card a {
+            display: block;
+            text-decoration: none;
+            color: var(--accent);
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .mode-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .mode-toggle:hover { background: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Grocery Store App</h1>
+            <button class="mode-toggle" id="themeToggle">Dark Mode</button>
+        </div>
+
+        <div style="text-align: right; margin-bottom: 20px;">
+            {% if session.admin_logged_in %}
+                <a href="/logout" style="color: #ef5350; text-decoration: none; font-weight: 500;">Logout (Admin)</a>
+            {% else %}
+                <a href="/login" style="color: var(--accent); text-decoration: none; font-weight: 500;">Admin Login</a>
+            {% endif %}
+        </div>
+
+        <div class="nav-grid">
+            <div class="card">
+                <a href="/search">🔍 Search Products</a>
+                <p>Find items by name or category</p>
+            </div>
+            {% if session.admin_logged_in %}
+            <div class="card">
+                <a href="/import">➕ Add Single Product</a>
+                <p>Manually enter one product</p>
+            </div>
+            <div class="card">
+                <a href="/import-file">📤 Import from CSV</a>
+                <p>Bulk upload multiple products</p>
+            </div>
+            {% else %}
+            <div class="card" style="opacity:0.6; filter: grayscale(50%);">
+                <span style="color: #999;">➕ Add Single Product<br><small>(Admin only)</small></span>
+            </div>
+            <div class="card" style="opacity:0.6; filter: grayscale(50%);">
+                <span style="color: #999;">📤 Import from CSV<br><small>(Admin only)</small></span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card">
+            <a href="/change-theme">🎨 Change Theme</a>
+            <p>Upload new config.xml to customize appearance</p>
+        </div>
+    </div>
+
+    <script>
+        const toggleButton = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // Load saved preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            body.classList.add('dark');
+            toggleButton.textContent = 'Light Mode';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            if (body.classList.contains('dark')) {
+                localStorage.setItem('darkMode', 'enabled');
+                toggleButton.textContent = 'Light Mode';
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+                toggleButton.textContent = 'Dark Mode';
+            }
+        });
+    </script>
+</body>
+</html>

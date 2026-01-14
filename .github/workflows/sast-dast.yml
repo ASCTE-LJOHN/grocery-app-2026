@@ -1,0 +1,104 @@
+name: Bandit Security Scan
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install latest Bandit
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade bandit
+
+      - name: Run Bandit (full report)
+        # continue-on-error: true
+        # https://bandit.readthedocs.io/en/latest/man/bandit.html#options
+        run: |
+          bandit --recursive . --format txt --verbose
+        # bandit -r . -f json -o bandit-report.json -lll
+
+      # - name: Upload Bandit report
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: bandit-report-${{ github.ref_name }}
+      #     path: bandit-report.json
+      
+  owasp-zap:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+  
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+  
+      - name: Install app dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Start Flask app
+        run: |
+          export FLASK_ENV=development
+          export FLASK_APP=app.py
+          flask run --host=127.0.0.1 --port=5000 &
+          sleep 2
+  
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-full-scan@v0.13.0
+        with:
+          target: http://127.0.0.1:5000
+          fail_action: false
+          allow_issue_writing: false
+          # artifact_name: "zap_report_${{ github.ref_name }}"
+          # cmd_options: "-l WARN -r /github/workspace/zap.html -j"
+          cmd_options: >
+            -l WARN
+            -j
+            -z "-config authentication.methodName=formBasedAuthentication
+                -config authentication.form.loginUrl=http://127.0.0.1:5000/login
+                -config authentication.form.loginRequestData=username=admin&password=TXJXb2JiaW5z"
+  
+      # - name: Upload ZAP report
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: zap-report-${{ github.ref_name }}
+      #     path: ${{ github.workspace }}/zap.html
+  ochrona:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+  
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+  
+      - name: Install app dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade ochrona
+      
+      - name: Ochrona Dependency Scan
+        run: |
+          ochrona
+        # ochrona --dir . --enable_sast True

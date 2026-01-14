@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Change Theme</title>
+    <style>
+        body { 
+            font-family: {{ theme.font }}; 
+            background: {{ theme.bg }}; 
+            color: {{ theme.text }}; 
+            margin: 0; padding: 40px; 
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: {{ theme.container }};
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid {{ theme.border }};
+        }
+        h2 { color: {{ theme.accent }}; }
+        .info { background: rgba(0,0,0,0.05); padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        input[type="file"] { margin: 20px 0; }
+        input[type="submit"] {
+            background: {{ theme.btn_bg }};
+            color: {{ theme.btn_text }};
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .back { margin-top: 30px; display: block; color: {{ theme.accent }}; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload New Theme (config.xml)</h2>
+
+        <div class="info">
+            Upload a new <code>config.xml</code> file to change colors, fonts, etc.<br>
+            The file should contain a <code>&lt;theme&gt;</code> section like your current one.<br><br>
+            Example structure:
+            <pre style="background:#eee; padding:10px; border-radius:4px;">
+&lt;theme&gt;
+    &lt;background_color&gt;#f0f4f8&lt;/background_color&gt;
+    &lt;text_color&gt;#2c3e50&lt;/text_color&gt;
+    ...
+&lt;/theme&gt;
+            </pre>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="padding:12px; margin:15px 0; border-radius:6px; 
+                                background:{% if category=='error' %}#ffebee{% else %}#e8f5e9{% endif %}; 
+                                color:{% if category=='error' %}#c62828{% else %}#2e7d32{% endif %};">
+                        {{ message | safe }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".xml" required>
+            <br><br>
+            <input type="submit" value="Upload & Apply New Theme">
+        </form>
+
+        <a href="/" class="back">← Back to Home</a>
+    </div>
+</body>
+</html>
