@@ -302,4 +302,4 @@ def change_theme():
 if __name__ == '__main__':
     print("Theme loaded:", theme)
     print("Using SQLite database: grocery.db")
-    app.run(debug=True)
+    app.run(debug=False)
