@@ -258,6 +258,7 @@ def search():
     return render_template('search.html', theme=theme)
 
 @app.route('/change-theme', methods=['GET', 'POST'])
+@admin_required 
 def change_theme():
     global theme  # we'll update the global theme variable
 
