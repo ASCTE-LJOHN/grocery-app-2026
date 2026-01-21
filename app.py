@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from models import Product
 import sqlite3
 import os
+import defusedxml
 
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
@@ -34,6 +35,7 @@ def load_config():
     }
 
     try:
+        defusedxml.defuse_stdlib()
         tree = ET.parse('config.xml')
         root = tree.getroot()
 
