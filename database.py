@@ -1,5 +1,37 @@
+
 import sqlite3
 from models import Product
+
+# ----------------------------
+# Validation + LIKE escaping
+# ----------------------------
+MAX_NAME = 200
+MAX_CATEGORY = 100
+MAX_QUERY = 200
+
+def _sanitize_string(value: str, max_length: int) -> str:
+    if value is None:
+        return ""
+    s = value.strip()
+    if len(s) > max_length:
+        raise ValueError(f"Input too long (max {max_length} chars)")
+    return s
+
+def _sanitize_price(value):
+    p = float(value)
+    if p < 0:
+        raise ValueError("Price must be >= 0")
+    return p
+
+def _sanitize_query(value: str) -> str:
+    return _sanitize_string(value, MAX_QUERY)
+
+def _escape_like(q: str) -> str:
+    if q is None:
+        return ""
+    q = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+    return q
+
 
 class DatabaseManager:
     def __init__(self, db_file='grocery.db'):
@@ -11,7 +43,7 @@ class DatabaseManager:
     def connect(self):
         try:
             self.conn = sqlite3.connect(self.db_file)
-            self.conn.row_factory = sqlite3.Row  # allows dict-like row access
+            self.conn.row_factory = sqlite3.Row
             print(f"Connected to SQLite database: {self.db_file}")
         except Exception as e:
             print(f"Error connecting to SQLite: {e}")
@@ -27,24 +59,22 @@ class DatabaseManager:
                         category TEXT
                     );
                 """)
-                # Optional: add unique constraint on name
-                # self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON products(name);")
 
     def insert_product(self, product):
         if self.conn:
             with self.conn:
+                name = _sanitize_string(product.name, MAX_NAME)
+                price = _sanitize_price(product.price)
+                category = _sanitize_string(product.category or "", MAX_CATEGORY) or None
+
                 cursor = self.conn.execute("""
                     INSERT INTO products (name, price, category)
                     VALUES (?, ?, ?)
-                """, (product.name, product.price, product.category))
+                """, (name, price, category))
                 product.id = cursor.lastrowid
             return product
 
     def bulk_insert_products(self, products_list):
-        """
-        products_list: list of dicts [{'name': str, 'price': float/str, 'category': str or None}, ...]
-        Returns: (success_count, error_count, errors)
-        """
         if not self.conn:
             return 0, len(products_list), ["No database connection"]
 
@@ -55,9 +85,9 @@ class DatabaseManager:
         with self.conn:
             for prod in products_list:
                 try:
-                    name = prod['name'].strip()
-                    price = float(prod['price'])
-                    category = prod.get('category', '').strip() or None
+                    name = _sanitize_string(prod.get('name', ''), MAX_NAME)
+                    price = _sanitize_price(prod.get('price', 0))
+                    category = _sanitize_string(prod.get('category', '') or '', MAX_CATEGORY) or None
 
                     if not name:
                         raise ValueError("Missing name")
@@ -75,17 +105,26 @@ class DatabaseManager:
 
     def search_products(self, query):
         if self.conn:
+            q = _sanitize_query(query)
+            q_escaped = _escape_like(q)
+
             cursor = self.conn.execute("""
                 SELECT id, name, price, category FROM products
-                WHERE name LIKE ? OR category LIKE ?
-            """, (f'%{query}%', f'%{query}%'))
+                WHERE name LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\'
+            """, (f'%{q_escaped}%', f'%{q_escaped}%'))
+
             rows = cursor.fetchall()
-            return [Product(
-                id=row['id'],
-                name=row['name'],
-                price=row['price'],
-                category=row['category']
-            ) for row in rows]
+
+            return [
+                Product(
+                    id=row['id'],
+                    name=row['name'],
+                    price=row['price'],
+                    category=row['category']
+                )
+                for row in rows
+            ]
+
         return []
 
     def close(self):

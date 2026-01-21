@@ -1,100 +1,112 @@
+
 from flask import (
-    Flask, 
-    render_template, 
-    request, 
-    jsonify, 
-    flash, 
-    redirect, 
-    url_for, 
-    session)
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    flash,
+    redirect,
+    url_for,
+    session
+)
 import csv
 from io import StringIO
 import xml.etree.ElementTree as ET
-from database import DatabaseManager
 from contextlib import contextmanager
 from models import Product
 import sqlite3
 import os
 
 app = Flask(__name__)
-app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
+app.secret_key = 'super-secret-key-for-flash-messages'
+
+# ----------------------------------------
+# Validation + LIKE escaping
+# ----------------------------------------
+MAX_NAME = 200
+MAX_CATEGORY = 100
+MAX_QUERY = 200
 
 
-# ────────────────────────────────────────────────
-# Load config from XML (theme + admin credentials)
-# ────────────────────────────────────────────────
+def _sanitize_string(value: str, max_length: int) -> str:
+    if value is None:
+        return ""
+    s = value.strip()
+    if len(s) > max_length:
+        raise ValueError(f"Input too long (max {max_length} characters)")
+    return s
+
+
+def _sanitize_price(value):
+    p = float(value)
+    if p < 0:
+        raise ValueError("Price must be >= 0")
+    return p
+
+
+def _sanitize_query(value: str) -> str:
+    return _sanitize_string(value, MAX_QUERY)
+
+
+def _escape_like(q: str) -> str:
+    if q is None:
+        return ""
+    return q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
+# ----------------------------------------
+# Load config.xml
+# ----------------------------------------
 def load_config():
     defaults = {
         'theme': {
-            'bg': '#f8f9fa', 'text': '#212529', 'accent': '#0d6efd',
-            'btn_bg': '#0d6efd', 'btn_text': '#ffffff',
-            'container': '#ffffff', 'border': '#dee2e6', 'font': 'system-ui, sans-serif'
+            'bg': '#f8f9fa',
+            'text': '#212529',
+            'accent': '#0d6efd',
+            'btn_bg': '#0d6efd',
+            'btn_text': '#ffffff',
+            'container': '#ffffff',
+            'border': '#dee2e6',
+            'font': 'system-ui, sans-serif'
         },
-        'admin': {'username': 'admin', 'password': 'TXJXb2JiaW5z'}
+        'admin': {"username": "admin", "password": "TXJXb2JiaW5z"}
     }
 
     try:
-        tree = ET.parse('config.xml')
+        tree = ET.parse("config.xml")
         root = tree.getroot()
 
-        # Theme
-        theme_node = root.find('theme')
-        if theme_node is not None:
+        # theme
+        theme_node = root.find("theme")
+        if theme_node:
             for child in theme_node:
-                if child.tag in defaults['theme']:
-                    defaults['theme'][child.tag] = child.text
+                if child.tag in defaults["theme"]:
+                    defaults["theme"][child.tag] = child.text
 
-        # Admin credentials
-        security = root.find('security')
-        if security is not None:
-            username = security.find('admin_username')
-            password = security.find('admin_password')
-            if username is not None and password is not None:
-                defaults['admin']['username'] = username.text.strip()
-                defaults['admin']['password'] = password.text.strip()
+        # admin settings
+        sec = root.find("security")
+        if sec:
+            u = sec.find("admin_username")
+            p = sec.find("admin_password")
+            if u is not None and p is not None:
+                defaults["admin"]["username"] = u.text.strip()
+                defaults["admin"]["password"] = p.text.strip()
 
-        return defaults['theme'], defaults['admin']
+        return defaults["theme"], defaults["admin"]
 
     except Exception as e:
-        print(f"Error loading config.xml: {e} → using defaults")
-        return defaults['theme'], defaults['admin']
+        print("Error loading XML:", e)
+        return defaults["theme"], defaults["admin"]
+
 
 theme, ADMIN_CREDENTIALS = load_config()
 
-# # Load theme from XML (unchanged)
-# def load_theme():
-#     try:
-#         tree = ET.parse('config.xml')
-#         root = tree.getroot()
-#         theme = root.find('theme')
-#         return {
-#             'bg': theme.find('background_color').text,
-#             'text': theme.find('text_color').text,
-#             'accent': theme.find('accent_color').text,
-#             'btn_bg': theme.find('button_bg').text,
-#             'btn_text': theme.find('button_text').text,
-#             'container': theme.find('container_bg').text,
-#             'border': theme.find('border_color').text,
-#             'font': theme.find('font_family').text,
-#         }
-#     except:
-#         return {
-#             'bg': '#f8f9fa',
-#             'text': '#212529',
-#             'accent': '#0d6efd',
-#             'btn_bg': '#0d6efd',
-#             'btn_text': '#ffffff',
-#             'container': '#ffffff',
-#             'border': '#dee2e6',
-#             'font': 'system-ui, sans-serif',
-#         }
-# theme = load_theme()
 
-# Use SQLite — no config.ini needed anymore
-# db_manager = DatabaseManager(db_file='grocery.db')
-# Instead, create a context manager for per-request connections
+# ----------------------------------------
+# DB helper
+# ----------------------------------------
 @contextmanager
-def get_db(db_file='grocery.db'):
+def get_db(db_file="grocery.db"):
     conn = sqlite3.connect(db_file)
     conn.row_factory = sqlite3.Row
     try:
@@ -102,204 +114,222 @@ def get_db(db_file='grocery.db'):
     finally:
         conn.close()
 
-# Helper to get a cursor with context
-def get_cursor():
-    return get_db().__enter__().cursor()  # but we'll use conn directly in most cases
 
-# ────────────────────────────────────────────────
-# Simple login required decorator
-# ────────────────────────────────────────────────
+# ----------------------------------------
+# Admin login required wrapper
+# ----------------------------------------
 from functools import wraps
+
 
 def admin_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('admin_logged_in'):
-            flash('Please log in as admin to access this page.', 'error')
-            return redirect(url_for('admin_login'))
+    def wrapper(*args, **kwargs):
+        if not session.get("admin_logged_in"):
+            flash("Please log in as admin.", "error")
+            return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
-    return decorated_function
 
-# ────────────────────────────────────────────────
-# Login / Logout routes
-# ────────────────────────────────────────────────
-@app.route('/login', methods=['GET', 'POST'])
+    return wrapper
+
+
+# ----------------------------------------
+# Login / Logout
+# ----------------------------------------
+@app.route("/login", methods=["GET", "POST"])
 def admin_login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+    if request.method == "POST":
+        u = request.form.get("username")
+        p = request.form.get("password")
 
-        if (username == ADMIN_CREDENTIALS['username'] and
-            password == ADMIN_CREDENTIALS['password']):
-            session['admin_logged_in'] = True
-            flash('Logged in successfully!', 'success')
-            return redirect(url_for('index'))
+        if u == ADMIN_CREDENTIALS["username"] and p == ADMIN_CREDENTIALS["password"]:
+            session["admin_logged_in"] = True
+            flash("Logged in!", "success")
+            return redirect(url_for("index"))
         else:
-            flash('Invalid username or password', 'error')
+            flash("Invalid credentials", "error")
 
-    return render_template('login.html', theme=theme)
+    return render_template("login.html", theme=theme)
 
-@app.route('/logout')
+
+@app.route("/logout")
 def admin_logout():
-    session.pop('admin_logged_in', None)
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('index'))
+    session.pop("admin_logged_in", None)
+    flash("Logged out.", "success")
+    return redirect(url_for("index"))
 
-# ────────────────────────────────────────────────
-# Protected import routes
-# ────────────────────────────────────────────────
-@app.route('/import', methods=['GET', 'POST'])
+
+# ----------------------------------------
+# Manual product import
+# ----------------------------------------
+@app.route("/import", methods=["GET", "POST"])
 @admin_required
 def import_data():
-    if request.method == 'POST':
-        name = request.form['name']
-        price = float(request.form['price'])
-        category = request.form.get('category', '')
-        product = Product(name=name, price=price, category=category)
+    if request.method == "POST":
+        try:
+            name = _sanitize_string(request.form["name"], MAX_NAME)
+            price = _sanitize_price(request.form["price"])
+            category = _sanitize_string(request.form.get("category", ""), MAX_CATEGORY) or None
+        except Exception as e:
+            flash(str(e), "error")
+            return redirect(request.url)
 
         with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
+            conn.execute(
+                """
                 INSERT INTO products (name, price, category)
                 VALUES (?, ?, ?)
-            """, (product.name, product.price, product.category))
-            product.id = cursor.lastrowid
+                """,
+                (name, price, category),
+            )
             conn.commit()
 
-        flash('Product added successfully!', 'success')
-        return redirect(url_for('index'))
+        flash("Product added!", "success")
+        return redirect(url_for("index"))
 
-    return render_template('import.html', theme=theme)
+    return render_template("import.html", theme=theme)
 
-@app.route('/import-file', methods=['GET', 'POST'])
+
+# ----------------------------------------
+# CSV Import
+# ----------------------------------------
+@app.route("/import-file", methods=["GET", "POST"])
 @admin_required
 def import_file():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part', 'error')
+    if request.method == "POST":
+        if "file" not in request.files:
+            flash("No file part", "error")
             return redirect(request.url)
 
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file', 'error')
+        file = request.files["file"]
+        if file.filename == "":
+            flash("No selected file", "error")
             return redirect(request.url)
 
-        if file:
-            try:
-                stream = StringIO(file.stream.read().decode('utf-8'), newline=None)
-                csv_reader = csv.DictReader(stream)
-                products = [dict(row) for row in csv_reader]
+        try:
+            stream = StringIO(file.stream.read().decode("utf-8"), newline=None)
+            reader = csv.DictReader(stream)
+            rows = list(reader)
 
-                success = 0
-                errors = []
+            success = 0
+            errors = []
 
-                with get_db() as conn:
-                    for prod in products:
-                        try:
-                            name = prod.get('name', '').strip()
-                            price = float(prod.get('price', 0))
-                            category = prod.get('category', '').strip() or None
-                            if not name:
-                                raise ValueError("Missing name")
-                            conn.execute("""
-                                INSERT OR IGNORE INTO products (name, price, category)
-                                VALUES (?, ?, ?)
-                            """, (name, price, category))
-                            success += 1
-                        except Exception as e:
-                            errors.append(f"Row error: {prod} → {str(e)}")
-                    conn.commit()
+            with get_db() as conn:
+                for row in rows:
+                    try:
+                        name = _sanitize_string(row.get("name", ""), MAX_NAME)
+                        price = _sanitize_price(row.get("price", 0))
+                        category = _sanitize_string(row.get("category", ""), MAX_CATEGORY) or None
 
-                msg = f"Import complete: {success} products added."
-                if errors:
-                    msg += f" {len(errors)} failed.<br><br>Errors:<br>" + "<br>".join(errors[:8])
-                    if len(errors) > 8:
-                        msg += f"<br>... and {len(errors)-8} more."
-                flash(msg, 'success' if success > 0 else 'error')
-                return redirect(url_for('index'))
+                        if not name:
+                            raise ValueError("Missing name")
 
-            except Exception as e:
-                flash(f'Import failed: {str(e)}', 'error')
-                return redirect(request.url)
+                        conn.execute(
+                            """
+                            INSERT OR IGNORE INTO products (name, price, category)
+                            VALUES (?, ?, ?)
+                            """,
+                            (name, price, category),
+                        )
+                        success += 1
 
-        flash('Please upload a .csv file', 'error')
-        return redirect(request.url)
+                    except Exception as e:
+                        errors.append(f"{row} → {e}")
 
-    return render_template('import_file.html', theme=theme)
+                conn.commit()
 
-# ────────────────────────────────────────────────
-# Unprotected routes
-# ────────────────────────────────────────────────
-@app.route('/')
-def index():
-    return render_template('index.html', theme=theme)
+            msg = f"Imported: {success} successful."
+            if errors:
+                msg += f" {len(errors)} failed.<br>" + "<br>".join(errors[:10])
+            flash(msg, "success" if success > 0 else "error")
+            return redirect(url_for("index"))
 
-@app.route('/search', methods=['GET', 'POST'])
+        except Exception as e:
+            flash(f"Import failed: {e}", "error")
+            return redirect(request.url)
+
+    return render_template("import_file.html", theme=theme)
+
+
+# ----------------------------------------
+# SEARCH
+# ----------------------------------------
+@app.route("/search", methods=["GET", "POST"])
 def search():
-    if request.method == 'POST':
-        query = request.form['query']
-        products = []
+    if request.method == "POST":
+        query = _sanitize_query(request.form["query"])
+        escaped = _escape_like(query)
 
         with get_db() as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT id, name, price, category FROM products
-                WHERE name LIKE ? OR category LIKE ?
-            """, (f'%{query}%', f'%{query}%'))
+                WHERE name LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\'
+                """,
+                (f"%{escaped}%", f"%{escaped}%"),
+            )
             rows = cursor.fetchall()
-            products = [Product(
-                id=row['id'],
-                name=row['name'],
-                price=row['price'],
-                category=row['category']
-            ) for row in rows]
 
-        return jsonify({'products': [p.to_dict() for p in products]})
+        products = [
+            Product(
+                id=row["id"],
+                name=row["name"],
+                price=row["price"],
+                category=row["category"],
+            ).to_dict()
+            for row in rows
+        ]
 
-    return render_template('search.html', theme=theme)
+        return jsonify({"products": products})
 
-@app.route('/change-theme', methods=['GET', 'POST'])
+    return render_template("search.html", theme=theme)
+
+
+# ----------------------------------------
+# Change Theme
+# ----------------------------------------
+@app.route("/change-theme", methods=["GET", "POST"])
+@admin_required
 def change_theme():
-    global theme  # we'll update the global theme variable
+    global theme
 
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part', 'error')
+    if request.method == "POST":
+        if "file" not in request.files:
+            flash("No file part", "error")
             return redirect(request.url)
 
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file', 'error')
+        file = request.files["file"]
+
+        if file.filename == "":
+            flash("No selected file", "error")
             return redirect(request.url)
 
-        if file:
-            try:
-                # Save the uploaded file as config.xml (overwrite)
-                filename = 'config.xml'
-                file.save(filename)
+        try:
+            file.save("config.xml")
+            new_theme, _ = load_config()
+            theme.clear()
+            theme.update(new_theme)
+            flash("Theme updated!", "success")
+            return redirect(url_for("index"))
 
-                # Immediately reload the theme from the new file
-                new_theme, _ = load_config()  # we only care about theme part
-                theme.clear()
-                theme.update(new_theme)
+        except Exception as e:
+            flash(f"Theme update error: {e}", "error")
+            return redirect(request.url)
 
-                flash('Theme updated successfully! Refresh any page to see changes.', 'success')
-                return redirect(url_for('index'))
+    return render_template("change_theme.html", theme=theme)
 
-            except ET.ParseError:
-                flash('Invalid XML format in the uploaded file.', 'error')
-            except Exception as e:
-                flash(f'Error applying new theme: {str(e)}', 'error')
 
-            # If failed, don't keep the bad file – but for simplicity we keep it
-            # You could add os.remove(filename) here on failure if desired
-        else:
-            flash('Please upload a valid .xml file', 'error')
+# ----------------------------------------
+# Home
+# ----------------------------------------
+@app.route("/")
+def index():
+    return render_template("index.html", theme=theme)
 
-        return redirect(request.url)
 
-    return render_template('change_theme.html', theme=theme)
-
-if __name__ == '__main__':
+# ----------------------------------------
+# Run
+# ----------------------------------------
+if __name__ == "__main__":
     print("Theme loaded:", theme)
-    print("Using SQLite database: grocery.db")
+    print("Using SQLite")
     app.run(debug=True)
