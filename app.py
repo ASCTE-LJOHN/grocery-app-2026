@@ -1,16 +1,16 @@
 from flask import (
-    Flask, 
-    render_template, 
-    request, 
-    jsonify, 
-    flash, 
-    redirect, 
-    url_for, 
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    flash,
+    redirect,
+    url_for,
     session)
 import csv
 from io import StringIO
 import xml.etree.ElementTree as ET
-from database import DatabaseManager
+from database import ensure_db_initialized
 from contextlib import contextmanager
 from models import Product
 import sqlite3
@@ -61,40 +61,11 @@ def load_config():
 
 theme, ADMIN_CREDENTIALS = load_config()
 
-# # Load theme from XML (unchanged)
-# def load_theme():
-#     try:
-#         tree = ET.parse('config.xml')
-#         root = tree.getroot()
-#         theme = root.find('theme')
-#         return {
-#             'bg': theme.find('background_color').text,
-#             'text': theme.find('text_color').text,
-#             'accent': theme.find('accent_color').text,
-#             'btn_bg': theme.find('button_bg').text,
-#             'btn_text': theme.find('button_text').text,
-#             'container': theme.find('container_bg').text,
-#             'border': theme.find('border_color').text,
-#             'font': theme.find('font_family').text,
-#         }
-#     except:
-#         return {
-#             'bg': '#f8f9fa',
-#             'text': '#212529',
-#             'accent': '#0d6efd',
-#             'btn_bg': '#0d6efd',
-#             'btn_text': '#ffffff',
-#             'container': '#ffffff',
-#             'border': '#dee2e6',
-#             'font': 'system-ui, sans-serif',
-#         }
-# theme = load_theme()
-
 # Use SQLite — no config.ini needed anymore
-# db_manager = DatabaseManager(db_file='grocery.db')
 # Instead, create a context manager for per-request connections
 @contextmanager
 def get_db(db_file='grocery.db'):
+    ensure_db_initialized(db_file=db_file, csv_file='sample_data.csv')
     conn = sqlite3.connect(db_file)
     conn.row_factory = sqlite3.Row
     try:
@@ -291,8 +262,6 @@ def change_theme():
             except Exception as e:
                 flash(f'Error applying new theme: {str(e)}', 'error')
 
-            # If failed, don't keep the bad file – but for simplicity we keep it
-            # You could add os.remove(filename) here on failure if desired
         else:
             flash('Please upload a valid .xml file', 'error')
 
