@@ -19,6 +19,22 @@ import os
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
 
+# ────────────────────────────────────────────────
+# Security Headers
+# ────────────────────────────────────────────────
+@app.after_request
+def set_security_headers(response):
+    # Anti-clickjacking header
+    response.headers['X-Frame-Options'] = 'DENY'
+    # Prevent MIME sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Enforce HTTPS (optional, comment out for development)
+    # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Content Security Policy
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    return response
 
 # ────────────────────────────────────────────────
 # Load config from XML (theme + admin credentials)
