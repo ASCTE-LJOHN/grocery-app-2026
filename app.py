@@ -15,9 +15,13 @@ from contextlib import contextmanager
 from models import Product
 import sqlite3
 import os
+from dotenv import load_dotenv # <-- Library in updated requirement.txt 
+
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
+app.secret_key = os.getenv('FLASK_SECRET_KEY')  #<-- Fixed Issue | Required for admin login
 
 
 # ────────────────────────────────────────────────
