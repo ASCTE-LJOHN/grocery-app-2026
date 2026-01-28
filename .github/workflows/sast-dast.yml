@@ -53,8 +53,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Suppress Node deprecation warnings
-        run: echo "NODE_OPTIONS=--no-deprecation" >> $GITHUB_ENV
+      #- name: Suppress Node deprecation warnings
+        #run: echo "NODE_OPTIONS=--no-deprecation" >> $GITHUB_ENV
 
       - name: Start Flask app
         run: |
