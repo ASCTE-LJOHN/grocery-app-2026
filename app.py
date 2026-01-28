@@ -30,6 +30,8 @@ def set_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # Enable XSS protection
     response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Suppress Server header to prevent version information disclosure
+    response.headers['Server'] = 'Web Server'
     # Enforce HTTPS (optional, comment out for development)
     # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy
