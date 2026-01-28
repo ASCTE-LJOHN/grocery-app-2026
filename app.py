@@ -15,9 +15,13 @@ from contextlib import contextmanager
 from models import Product
 import sqlite3
 import os
+from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
+
+# Disable Werkzeug server version exposure
+WSGIRequestHandler.server_version = ""
 
 # ────────────────────────────────────────────────
 # Security Headers
@@ -31,7 +35,7 @@ def set_security_headers(response):
     # Enable XSS protection
     response.headers['X-XSS-Protection'] = '1; mode=block'
     # Remove Server header to prevent version information disclosure
-    response.headers.pop('Server', None)
+    response.headers['Server'] = ''
     # Enforce HTTPS (optional, comment out for development)
     # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     # Content Security Policy
