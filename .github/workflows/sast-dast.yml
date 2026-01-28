@@ -69,7 +69,7 @@ jobs:
           # artifact_name: "zap_report_${{ github.ref_name }}"
           # cmd_options: "-l WARN -r /github/workspace/zap.html -j"
           cmd_options: >
-            -l DEBUG
+            -l INFO
             -j
             -z "-config authentication.methodName=formBasedAuthentication
                 -config authentication.form.loginUrl=http://127.0.0.1:5000/login
