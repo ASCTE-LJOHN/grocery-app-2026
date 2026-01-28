@@ -52,7 +52,10 @@ jobs:
       - name: Install app dependencies
         run: |
           pip install -r requirements.txt
-      
+
+      - name: Suppress Node deprecation warnings
+        run: echo "NODE_OPTIONS=--no-deprecation" >> $GITHUB_ENV
+
       - name: Start Flask app
         run: |
           export FLASK_ENV=development
@@ -61,7 +64,7 @@ jobs:
           sleep 2
   
       - name: ZAP Baseline Scan
-        uses: zaproxy/action-full-scan@v0.13.0
+        uses: zaproxy/action-full-scan@v0.14.0
         with:
           target: http://127.0.0.1:5000
           fail_action: True
