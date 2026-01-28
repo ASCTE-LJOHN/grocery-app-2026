@@ -17,6 +17,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
+app.config.update(SESSION_COOKIE_SAMESITE = "Lax")
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
 
 
