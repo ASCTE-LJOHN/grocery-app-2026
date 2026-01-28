@@ -19,6 +19,15 @@ import os
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
 
+@app.after_request
+def set_security_headers(response):
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), "
+        "payment=(), usb=(), magnetometer=(), gyroscope=(), "
+        "accelerometer=(), fullscreen=(self)"
+    )
+    return response
+
 # ────────────────────────────────────────────────
 # Security Headers
 # ────────────────────────────────────────────────
