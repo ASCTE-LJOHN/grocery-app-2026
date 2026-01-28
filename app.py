@@ -21,6 +21,7 @@ app.config.update(SESSION_COOKIE_SAMESITE = "Lax")
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
 
 
+
 # ────────────────────────────────────────────────
 # Load config from XML (theme + admin credentials)
 # ────────────────────────────────────────────────
@@ -238,7 +239,7 @@ def index():
 @app.route('/search', methods=['GET', 'POST'])
 def search():
     if request.method == 'POST':
-        query = request.form['query']
+        query = request.form.get('query','')
         products = []
 
         with get_db() as conn:
@@ -299,12 +300,6 @@ def change_theme():
         return redirect(request.url)
 
     return render_template('change_theme.html', theme=theme)
-
-#These lines of code prevent MIME Sniffing
-@app.after_request
-def add_security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    return response
 
 
 if __name__ == '__main__':
