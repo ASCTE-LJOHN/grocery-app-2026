@@ -17,6 +17,7 @@ import sqlite3
 import os
 
 app = Flask(__name__)
+app.config.update(SESSION_COOKIE_SAMESITE = "Lax")
 app.secret_key = 'super-secret-key-for-flash-messages'  # required for flash
 
 
@@ -302,4 +303,4 @@ def change_theme():
 if __name__ == '__main__':
     print("Theme loaded:", theme)
     print("Using SQLite database: grocery.db")
-    app.run(debug=True)
+    app.run(debug=False)
