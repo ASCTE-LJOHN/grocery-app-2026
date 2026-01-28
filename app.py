@@ -300,6 +300,16 @@ def change_theme():
 
     return render_template('change_theme.html', theme=theme)
 
+#These lines of code prevent MIME Sniffing
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 if __name__ == '__main__':
     print("Theme loaded:", theme)
     print("Using SQLite database: grocery.db")
