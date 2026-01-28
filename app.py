@@ -7,11 +7,11 @@ from flask import (
     flash,
     redirect,
     url_for,
-    session
-)
+    session)
 import csv
 from io import StringIO
 import xml.etree.ElementTree as ET
+from database import ensure_db_initialized
 from contextlib import contextmanager
 from models import Product
 import sqlite3
@@ -27,6 +27,22 @@ MAX_NAME = 200
 MAX_CATEGORY = 100
 MAX_QUERY = 200
 
+# ────────────────────────────────────────────────
+# Security Headers
+# ────────────────────────────────────────────────
+@app.after_request
+def set_security_headers(response):
+    # Anti-clickjacking header
+    response.headers['X-Frame-Options'] = 'DENY'
+    # Prevent MIME sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Enforce HTTPS (optional, comment out for development)
+    # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Content Security Policy
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    return response
 
 def _sanitize_string(value: str, max_length: int) -> str:
     if value is None:
@@ -101,12 +117,11 @@ def load_config():
 
 theme, ADMIN_CREDENTIALS = load_config()
 
-
-# ----------------------------------------
-# DB helper
-# ----------------------------------------
+# Use SQLite — no config.ini needed anymore
+# Instead, create a context manager for per-request connections
 @contextmanager
-def get_db(db_file="grocery.db"):
+def get_db(db_file='grocery.db'):
+    ensure_db_initialized(db_file=db_file, csv_file='sample_data.csv')
     conn = sqlite3.connect(db_file)
     conn.row_factory = sqlite3.Row
     try:
@@ -331,5 +346,5 @@ def index():
 # ----------------------------------------
 if __name__ == "__main__":
     print("Theme loaded:", theme)
-    print("Using SQLite")
+    print("Using SQLite database: grocery.db")
     app.run(debug=True)
