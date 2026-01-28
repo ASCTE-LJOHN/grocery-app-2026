@@ -21,6 +21,6 @@
 
     <security>
         <admin_username>admin</admin_username>
-        <admin_password>TXJXb2JiaW5z</admin_password>
+        <admin_password>${AD_PASS}</admin_password>
     </security>
 </app>

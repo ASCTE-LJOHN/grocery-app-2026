@@ -50,7 +50,7 @@ def load_config():
             'btn_bg': '#0d6efd', 'btn_text': '#ffffff',
             'container': '#ffffff', 'border': '#dee2e6', 'font': 'system-ui, sans-serif'
         },
-        'admin': {'username': 'admin', 'password': 'TXJXb2JiaW5z'}
+        'admin': {'username': 'admin', 'password': 'changeme'} #<-- default credentials
     }
 
     try:
@@ -71,7 +71,7 @@ def load_config():
             password = security.find('admin_password')
             if username is not None and password is not None:
                 defaults['admin']['username'] = username.text.strip()
-                defaults['admin']['password'] = password.text.strip()
+                defaults['admin']['password'] = os.getenv('ADMIN_PASS')
 
         return defaults['theme'], defaults['admin']
 

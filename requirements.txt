@@ -7,3 +7,4 @@ Jinja2==3.1.6
 MarkupSafe==3.0.3
 Werkzeug==3.1.5
 python-dotenv==1.2.1
+#python-dotenv-valt
