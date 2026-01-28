@@ -9,7 +9,7 @@ from flask import (
     session)
 import csv
 from io import StringIO
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 from database import DatabaseManager
 from contextlib import contextmanager
 from models import Product
