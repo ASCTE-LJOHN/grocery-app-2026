@@ -27,10 +27,9 @@ class DatabaseManager:
                         category TEXT
                     );
                 """)
-<<<<<<< Updated upstream
+                
                 # Optional: add unique constraint on name
                 # self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON products(name);")
-=======
 
                 # If you want INSERT OR IGNORE to actually ignore duplicates,
                 # you need a UNIQUE constraint/index like this:
@@ -91,7 +90,6 @@ class DatabaseManager:
 
         except Exception as e:
             print(f"Error seeding DB from CSV: {e}")
->>>>>>> Stashed changes
 
     def insert_product(self, product):
         if self.conn:
