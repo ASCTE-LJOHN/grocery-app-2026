@@ -93,7 +93,7 @@ class DatabaseManager:
 
                 # If you want INSERT OR IGNORE to actually ignore duplicates,
                 # you need a UNIQUE constraint/index like this:
-                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name);")
+            self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name);")
 
     def _products_count(self) -> int:
         if not self.conn:
